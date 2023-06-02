@@ -1,5 +1,5 @@
 resource "aws_iam_role" "ssm_selfmade" {
-  name = "ssm-mgmt"
+  name = "Admin"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -17,22 +17,38 @@ resource "aws_iam_role" "ssm_selfmade" {
   }
 }
 
-
-resource "aws_iam_role_policy_attachment" "ssm_mgmt_attachment" {
-  role       = aws_iam_role.ssm_selfmade.id
-  policy_arn = var.policy_arn_SSM
-}
-
 resource "aws_iam_role_policy_attachment" "Admin_Access" {
   role       = aws_iam_role.ssm_selfmade.id
   policy_arn = var.policy_arn_Admin_Access
 }
 
-resource "aws_iam_instance_profile" "iam_instance_profile" {
-  name = "instance-profile"
-  role = aws_iam_role.ssm_selfmade.name
-  tags = {
-    name = "profile"
-  }
+
+resource "aws_iam_policy" "eventbridge_codebuild_policy" {
+  name        = "Event-Bridge-Code-Build-Policy"
+  description = "Policy to allow EventBridge to start CodeBuild"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowEventBridgeToStartCodeBuild",
+      "Effect": "Allow",
+      "Action": "codebuild:StartBuild",
+      "Resource": "${aws_codebuild_project.your_codebuild_project.arn}"
+    }
+  ]
+}
+EOF
 }
 
+resource "aws_iam_role_policy_attachment" "eventbridge_codebuild_attachment" {
+  role       = aws_iam_role.ssm_selfmade.name
+  policy_arn = aws_iam_policy.eventbridge_codebuild_policy.arn
+}
+
+resource "aws_codebuild_project" "your_codebuild_project" {
+  # Your CodeBuild project configuration goes here
+  # ...
+  service_role = aws_iam_role.ssm_selfmade.arn
+}
